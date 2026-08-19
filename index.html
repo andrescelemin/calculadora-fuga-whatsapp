@@ -355,7 +355,7 @@
 
 <script>
 // Apunta esto a tu webhook de n8n. Vacío = modo demostración.
-const WEBHOOK_URL = "";
+const WEBHOOK_URL = "https://n8n-n8n.pqtz58.easypanel.host/webhook/calculadora-fuga-whatsapp";
 
 const NICHOS = {
   dental:      {ticket:800000, msgs:["Buenas, ¿cuánto vale una limpieza?","¿Tienen cita para esta semana?","Se me partió una muela, ¿atienden hoy?","¿Manejan ortodoncia por cuotas?","¿Aceptan mi seguro?","Quiero cotizar un implante","¿Abren los sábados?"]},
@@ -472,6 +472,7 @@ $("form").addEventListener("submit", async e => {
   if(!valido) return;
 
   const datos = {
+    event: "lead",
     nombre, email, negocio, ciudad,
     whatsapp: whatsapp || null,
     moneda,
