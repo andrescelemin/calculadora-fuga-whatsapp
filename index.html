@@ -228,6 +228,8 @@
     margin-top:52px;font-family:var(--mono);font-size:9.5px;font-weight:300;
     letter-spacing:.08em;color:var(--gris-claro);text-transform:uppercase;
   }
+  footer a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  footer a:hover{color:var(--tinta)}
 
   @media(prefers-reduced-motion:reduce){
     *{animation:none!important;transition:none!important}
@@ -317,16 +319,8 @@
 
   <!-- Captura -->
   <div class="gate">
-    <h2 id="titulo-gate">Ese dinero no se perdió. Se fue con quien sí contestó.</h2>
-    <p><strong>No te voy a mandar un PDF.</strong> Reviso tu negocio y te digo dónde se está yendo — sin costo, sin llamada previa, y sin que tengas que instalar nada.</p>
-
-    <ul class="pasos">
-      <li><i>REVISO 1</i><span>Tu ficha de Google: datos errados, horarios viejos y preguntas de clientes que quedaron sin responder.</span></li>
-      <li><i>REVISO 2</i><span>Tus redes: comentarios pidiendo información que nadie contestó, con capturas.</span></li>
-      <li><i>REVISO 3</i><span>Tu WhatsApp: te escribo como cliente y mido cuánto tarda de verdad la respuesta.</span></li>
-    </ul>
-
-    <p class="entrega">Te llega por correo en <strong>máximo 48 horas</strong>, con los tres puntos concretos donde estás perdiendo clientes. Si no encuentro nada grave, también te lo digo.</p>
+    <h2 id="titulo-gate">Ese dinero no se recupera solo.</h2>
+    <p>Un Agente de IA en WhatsApp responde por ti las 24 horas, incluso cuando cierras — así no vuelves a perder una consulta como las de arriba.</p>
 
     <form class="form" id="form" novalidate>
       <div class="par">
@@ -338,19 +332,18 @@
         <input type="text" id="ciudad" placeholder="Ciudad" autocomplete="address-level2" required>
       </div>
       <input type="tel" id="whatsapp" placeholder="WhatsApp (opcional)" autocomplete="tel">
-      <p class="ayuda">Solo si quieres que también mida tu tiempo real de respuesta. Te escribo una vez, como cliente.</p>
       <p class="error" id="error">Faltan datos. Necesito tu nombre, correo, el nombre del negocio y la ciudad.</p>
-      <button type="submit">Quiero mi revisión</button>
+      <button type="submit">Quiero recuperar ese dinero</button>
     </form>
-    <p class="legal">Hago <strong>5 revisiones por semana</strong>. Uso tus datos solo para hacer la revisión y enviártela. No te sumo a ninguna lista de correos.</p>
+    <p class="legal">Uso tus datos solo para contactarte por el resultado de tu calculadora. No te sumo a ninguna lista de correos.</p>
 
     <div class="exito" id="exito">
-      <strong>Anotado. Ya estoy revisando.</strong>
-      <p>Te llega el resultado por correo en máximo 48 horas. Si no aparece, revisa en promociones o spam.</p>
+      <strong>¡Listo!</strong>
+      <p>Te abrimos WhatsApp con tu resultado. Si no se abrió, revisa que tu navegador no haya bloqueado la ventana emergente.</p>
     </div>
   </div>
 
-  <footer>NeXo IA — Agentes de IA para negocios que atienden por WhatsApp</footer>
+  <footer><a href="https://agentes-inteligencia-artificial.online" target="_blank" rel="noopener">NeXo IA</a> — Agentes de IA para negocios que atienden por WhatsApp</footer>
 </div>
 
 <script>
@@ -471,6 +464,10 @@ $("form").addEventListener("submit", async e => {
   $("error").style.display = valido ? "none" : "block";
   if(!valido) return;
 
+  // Se abre de inmediato (sincrono con el clic) para que el navegador no bloquee el popup
+  // mientras esperamos la respuesta del envio a Sheets.
+  const wspWindow = window.open("", "_blank");
+
   const datos = {
     event: "lead",
     nombre, email, negocio, ciudad,
@@ -487,6 +484,7 @@ $("form").addEventListener("submit", async e => {
     solicitado_en: new Date().toISOString()
   };
 
+  // 1. Envio a Sheets (via n8n) - exactamente igual que antes, sin modificar.
   if(WEBHOOK_URL){
     try{
       await fetch(WEBHOOK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
@@ -495,11 +493,19 @@ $("form").addEventListener("submit", async e => {
     console.log("Modo demostración — este es el payload que recibiría n8n:", datos);
   }
 
+  // 2. Abrir WhatsApp con el resultado precargado.
+  const tipoNegocio  = $("nicho").selectedOptions[0].text;
+  const montoMensual = $("mensual").textContent;
+  const mensajeWsp = `Hola, use la calculadora de NeXo IA y vi que mi ${tipoNegocio} podria estar perdiendo aprox. ${montoMensual} al mes por WhatsApp sin responder a tiempo. Quiero saber como solucionarlo.`;
+  const wspUrl = `https://wa.me/573102691503?text=${encodeURIComponent(mensajeWsp)}`;
+
+  if(wspWindow) wspWindow.location.href = wspUrl;
+  else window.open(wspUrl, "_blank");
+
   $("form").style.display = "none";
   document.querySelector(".legal").style.display = "none";
-  document.querySelector(".entrega").style.display = "none";
   $("exito").style.display = "block";
-  $("titulo-gate").textContent = `${nombre}, ya estoy revisando ${negocio}.`;
+  $("titulo-gate").textContent = `${nombre}, te abrimos WhatsApp con tu resultado.`;
 });
 
 $("ticket").value = sliderDesdeTicket(800000);
