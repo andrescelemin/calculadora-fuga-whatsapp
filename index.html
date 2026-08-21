@@ -181,6 +181,8 @@
     margin-top:clamp(28px,5vw,44px);background:#fff;border-radius:5px;
     padding:clamp(24px,4.5vw,44px);
   }
+  .gate-grid{display:grid;grid-template-columns:1fr;gap:clamp(28px,4vw,44px);align-items:start}
+  @media(min-width:880px){.gate-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
   .gate h2{
     font-family:var(--display);font-weight:800;
     font-size:clamp(1.5rem,4.2vw,2.3rem);letter-spacing:-.03em;
@@ -224,11 +226,46 @@
   .exito p{font-size:.9rem;color:var(--gris)}
   .error{color:var(--perdida);font-size:.83rem;display:none}
 
+  /* ---------- Mockup de chat (junto al formulario) ---------- */
+  .chat-mock{
+    background:var(--fondo);border-radius:5px;padding:18px;
+    border:1px solid var(--linea);
+  }
+  .chat-mock-top{
+    display:flex;align-items:center;gap:10px;
+    padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--linea);
+  }
+  .chat-mock-avatar{
+    width:34px;height:34px;border-radius:50%;background:var(--tinta);color:#fff;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+    font-family:var(--display);font-weight:600;font-size:.8rem;
+  }
+  .chat-mock-top strong{display:block;font-size:.86rem;font-weight:600}
+  .chat-mock-top span{display:block;font-size:.74rem;color:var(--teal);margin-top:1px}
+  .chat-mock-body{display:flex;flex-direction:column;gap:9px}
+  .bubble{max-width:84%;padding:9px 12px;border-radius:10px;font-size:.83rem;line-height:1.4}
+  .bubble p{margin:0}
+  .bubble time{
+    display:block;font-family:var(--mono);font-size:8.5px;font-weight:300;
+    margin-top:4px;text-align:right;letter-spacing:.04em;
+  }
+  .bubble-in{
+    background:#fff;border:1px solid var(--linea);color:var(--tinta);
+    align-self:flex-start;border-bottom-left-radius:2px;
+  }
+  .bubble-in time{color:var(--gris-claro)}
+  .bubble-out{
+    background:var(--teal);color:#fff;
+    align-self:flex-end;border-bottom-right-radius:2px;
+  }
+  .bubble-out time{color:rgba(255,255,255,.75)}
+
   footer{
     margin-top:52px;font-family:var(--mono);font-size:9.5px;font-weight:300;
     letter-spacing:.08em;color:var(--gris-claro);text-transform:uppercase;
+    text-align:center;
   }
-  footer a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+  footer a{color:inherit;text-decoration:underline;text-underline-offset:2px;font-weight:700}
   footer a:hover{color:var(--tinta)}
 
   @media(prefers-reduced-motion:reduce){
@@ -241,7 +278,7 @@
 
   <div class="marca">NeXo IA · Calculadora de fuga</div>
 
-  <h1>Tu negocio cierra a las 6. Tu WhatsApp <em>no</em>.</h1>
+  <h1>Tu negocio cierra a las 6:00 PM. Tu WhatsApp <em>NO</em>.</h1>
   <p class="sub">Mueve los números de tu operación y mira cuánto se queda en las conversaciones que nadie alcanzó a responder.</p>
 
   <div class="panel">
@@ -319,31 +356,63 @@
 
   <!-- Captura -->
   <div class="gate">
-    <h2 id="titulo-gate">Ese dinero no se recupera solo.</h2>
-    <p>Un Agente de IA en WhatsApp responde por ti las 24 horas, incluso cuando cierras — así no vuelves a perder una consulta como las de arriba.</p>
+    <div class="gate-grid">
+      <div class="gate-main">
+        <h2 id="titulo-gate">Ese dinero no se recupera solo.</h2>
+        <p>Un Agente de IA en WhatsApp responde por ti las 24 horas, incluso cuando cierras — así no vuelves a perder una consulta como las de arriba.</p>
 
-    <form class="form" id="form" novalidate>
-      <div class="par">
-        <input type="text" id="nombre" placeholder="Tu nombre" autocomplete="name" required>
-        <input type="email" id="email" placeholder="Tu correo" autocomplete="email" required>
-      </div>
-      <div class="par">
-        <input type="text" id="negocio" placeholder="Nombre de tu negocio" autocomplete="organization" required>
-        <input type="text" id="ciudad" placeholder="Ciudad" autocomplete="address-level2" required>
-      </div>
-      <input type="tel" id="whatsapp" placeholder="WhatsApp (opcional)" autocomplete="tel">
-      <p class="error" id="error">Faltan datos. Necesito tu nombre, correo, el nombre del negocio y la ciudad.</p>
-      <button type="submit">Quiero recuperar ese dinero</button>
-    </form>
-    <p class="legal">Uso tus datos solo para contactarte por el resultado de tu calculadora. No te sumo a ninguna lista de correos.</p>
+        <form class="form" id="form" novalidate>
+          <div class="par">
+            <input type="text" id="nombre" placeholder="Tu nombre" autocomplete="name" required>
+            <input type="email" id="email" placeholder="Tu correo" autocomplete="email" required>
+          </div>
+          <div class="par">
+            <input type="text" id="negocio" placeholder="Nombre de tu negocio" autocomplete="organization" required>
+            <input type="text" id="ciudad" placeholder="Ciudad" autocomplete="address-level2" required>
+          </div>
+          <input type="tel" id="whatsapp" placeholder="WhatsApp (opcional)" autocomplete="tel">
+          <p class="error" id="error">Faltan datos. Necesito tu nombre, correo, el nombre del negocio y la ciudad.</p>
+          <button type="submit">Quiero recuperar ese dinero</button>
+        </form>
+        <p class="legal">Uso tus datos solo para contactarte por el resultado de tu calculadora. No te sumo a ninguna lista de correos.</p>
 
-    <div class="exito" id="exito">
-      <strong>¡Listo!</strong>
-      <p>Te abrimos WhatsApp con tu resultado. Si no se abrió, revisa que tu navegador no haya bloqueado la ventana emergente.</p>
+        <div class="exito" id="exito">
+          <strong>¡Listo!</strong>
+          <p>Te abrimos WhatsApp con tu resultado. Si no se abrió, revisa que tu navegador no haya bloqueado la ventana emergente.</p>
+        </div>
+      </div>
+
+      <div class="chat-mock" aria-hidden="true">
+        <div class="chat-mock-top">
+          <div class="chat-mock-avatar">CO</div>
+          <div>
+            <strong>Consultorio Odontológico</strong>
+            <span>respondiendo al instante</span>
+          </div>
+        </div>
+        <div class="chat-mock-body">
+          <div class="bubble bubble-in">
+            <p>Sí, ¿tienen algo el jueves en la tarde?</p>
+            <time>8:43 p. m.</time>
+          </div>
+          <div class="bubble bubble-out">
+            <p>Tenemos jueves 3:00 p. m. o 4:30 p. m. ¿Cuál te queda mejor?</p>
+            <time>8:43 p. m. ✓✓</time>
+          </div>
+          <div class="bubble bubble-in">
+            <p>El de 4:30 está perfecto</p>
+            <time>8:44 p. m.</time>
+          </div>
+          <div class="bubble bubble-out">
+            <p>Listo. Cita confirmada: jueves 4:30 p. m. Te enviaré un recordatorio un día antes.</p>
+            <time>8:44 p. m. ✓✓</time>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <footer><a href="https://agentes-inteligencia-artificial.online" target="_blank" rel="noopener">NeXo IA</a> — Agentes de IA para negocios que atienden por WhatsApp</footer>
+  <footer><a href="https://consultorios.agentes-inteligencia-artificial.online/" target="_blank" rel="noopener">NeXo IA</a> — Agentes de IA para negocios que atienden por WhatsApp</footer>
 </div>
 
 <script>
