@@ -539,6 +539,7 @@ $("nicho").addEventListener("change", e => {
   const factor = MONEDAS[moneda].def / MONEDAS.COP.def;
   $("ticket").value = sliderDesdeTicket(Math.max(MONEDAS[moneda].min, base*factor));
   render();
+  nxTrackInteraccion();
 });
 
 // Señal de intención intermedia: más frecuente que Lead, sirve como
