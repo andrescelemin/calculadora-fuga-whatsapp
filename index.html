@@ -24,6 +24,23 @@ fbq('track', 'PageView');
 src="https://www.facebook.com/tr?id=1612251387088810&ev=PageView&noscript=1"
 /></noscript>
 <!-- End Meta Pixel Code -->
+<!-- NeXo IA: captura de origen de campaña -->
+<script>
+(function () {
+  try {
+    var p = new URLSearchParams(window.location.search);
+    var utm = {
+      source:   p.get('utm_source')   || '',
+      medium:   p.get('utm_medium')   || '',
+      campaign: p.get('utm_campaign') || '',
+      content:  p.get('utm_content')  || ''
+    };
+    if (utm.source) sessionStorage.setItem('nx_utm', JSON.stringify(utm));
+    var fbclid = p.get('fbclid');
+    if (fbclid) sessionStorage.setItem('nx_fbclid', fbclid);
+  } catch (e) { /* nunca romper la página por tracking */ }
+})();
+</script>
 <style>
   :root{
     --fondo:#E4E7F0;
@@ -241,6 +258,7 @@ src="https://www.facebook.com/tr?id=1612251387088810&ev=PageView&noscript=1"
   }
   .exito strong{font-family:var(--display);font-weight:600;font-size:1.15rem;display:block;margin-bottom:5px}
   .exito p{font-size:.9rem;color:var(--gris)}
+  .exito a{color:var(--teal);font-weight:600;text-decoration:underline;text-underline-offset:2px}
   .error{color:var(--perdida);font-size:.83rem;display:none}
 
   /* ---------- Mockup de chat (junto al formulario) ---------- */
@@ -395,7 +413,7 @@ src="https://www.facebook.com/tr?id=1612251387088810&ev=PageView&noscript=1"
 
         <div class="exito" id="exito">
           <strong>¡Listo!</strong>
-          <p>Te abrimos WhatsApp con tu resultado. Si no se abrió, revisa que tu navegador no haya bloqueado la ventana emergente.</p>
+          <p>Te estamos abriendo WhatsApp con tu resultado. Si no se abre solo, <a id="wsp-link" href="#" rel="noopener">toca aquí para continuar</a>.</p>
         </div>
       </div>
 
@@ -523,7 +541,26 @@ $("nicho").addEventListener("change", e => {
   render();
 });
 
-["leads","fuera","cierre","ticket"].forEach(id => $(id).addEventListener("input", render));
+// Señal de intención intermedia: más frecuente que Lead, sirve como
+// respaldo de optimización mientras el píxel acumula historial.
+let nxInteraccionEnviada = false;
+function nxTrackInteraccion(){
+  if(nxInteraccionEnviada) return;
+  nxInteraccionEnviada = true;
+  try{
+    if(typeof fbq === "function"){
+      fbq("track","ViewContent",{
+        content_name: "Calculadora Fuga WhatsApp",
+        content_category: $("nicho").value
+      });
+    }
+  }catch(err){}
+}
+
+["leads","fuera","cierre","ticket"].forEach(id => {
+  $(id).addEventListener("input", render);
+  $(id).addEventListener("change", nxTrackInteraccion);
+});
 
 document.querySelectorAll(".moneda button").forEach(b => {
   b.addEventListener("click", () => {
@@ -535,7 +572,7 @@ document.querySelectorAll(".moneda button").forEach(b => {
   });
 });
 
-$("form").addEventListener("submit", async e => {
+$("form").addEventListener("submit", e => {
   e.preventDefault();
   const nombre   = $("nombre").value.trim();
   const email    = $("email").value.trim();
@@ -550,9 +587,10 @@ $("form").addEventListener("submit", async e => {
   $("error").style.display = valido ? "none" : "block";
   if(!valido) return;
 
-  // Se abre de inmediato (sincrono con el clic) para que el navegador no bloquee el popup
-  // mientras esperamos la respuesta del envio a Sheets.
-  const wspWindow = window.open("", "_blank");
+  // --- Origen de campaña ---
+  let utm = {};
+  try { utm = JSON.parse(sessionStorage.getItem('nx_utm') || '{}'); } catch(err) {}
+  const origen = utm.source || 'organico';
 
   const datos = {
     event: "lead",
@@ -567,45 +605,87 @@ $("form").addEventListener("submit", async e => {
     perdida_mensual: Math.round(+$("leads").value * (+$("fuera").value/100) * ticketDesdeSlider(+$("ticket").value) * (+$("cierre").value/100)),
     quiere_medicion_whatsapp: Boolean(whatsapp),
     origen: "calculadora-fuga-whatsapp",
+    // --- claves nuevas: atribución de campaña ---
+    utm_source:   utm.source   || null,
+    utm_medium:   utm.medium   || null,
+    utm_campaign: utm.campaign || null,
+    utm_content:  utm.content  || null,
+    fbclid: sessionStorage.getItem('nx_fbclid') || null,
     solicitado_en: new Date().toISOString()
   };
 
-  // Evento de conversion para Meta Ads: se dispara solo cuando el formulario
-  // ya paso la validacion (lead real, no un intento vacio).
-  if (typeof fbq === "function") {
-    fbq("track", "Lead", {
-      content_name: "Calculadora Fuga WhatsApp",
-      value: datos.perdida_mensual,
-      currency: moneda
-    });
-  }
-
-  // 1. Envio a Sheets (via n8n) - exactamente igual que antes, sin modificar.
-  if(WEBHOOK_URL){
-    try{
-      await fetch(WEBHOOK_URL,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(datos)});
-    }catch(err){ console.error("No se pudo enviar:", err); }
-  }else{
-    console.log("Modo demostración — este es el payload que recibiría n8n:", datos);
-  }
-
-  // 2. Abrir WhatsApp con el resultado precargado.
+  // --- 1. Mensaje de WhatsApp (se construye antes de navegar) ---
   const tipoNegocio  = $("nicho").selectedOptions[0].text;
   const montoMensual = $("mensual").textContent;
-  const mensajeWsp = `Hola, use la calculadora de NeXo IA y vi que mi ${tipoNegocio} podria estar perdiendo aprox. ${montoMensual} al mes por WhatsApp sin responder a tiempo. Quiero saber como solucionarlo.`;
+  const mensajeWsp =
+    `Hola, usé la calculadora de NeXo IA y vi que mi ${tipoNegocio} ` +
+    `podría estar perdiendo aprox. ${montoMensual} al mes por WhatsApp ` +
+    `sin responder a tiempo. Quiero saber cómo solucionarlo.` +
+    `\n\n[ref: ${origen}]`;
   const wspUrl = `https://wa.me/573102691503?text=${encodeURIComponent(mensajeWsp)}`;
 
-  if(wspWindow) wspWindow.location.href = wspUrl;
-  else window.open(wspUrl, "_blank");
+  // --- 2. Evento de conversión para Meta Ads ---
+  // eventID permite deduplicar si más adelante se añade Conversions API.
+  try {
+    if (typeof fbq === "function") {
+      const eventID = 'lead_' + Date.now() + '_' + Math.random().toString(36).slice(2,10);
+      fbq("track", "Lead", {
+        content_name:     "Calculadora Fuga WhatsApp",
+        content_category: datos.nicho,
+        value:            datos.perdida_mensual,
+        currency:         moneda
+      }, { eventID: eventID });
+      datos.event_id = eventID;
+    }
+  } catch(err) { /* nunca bloquear la conversión por tracking */ }
 
+  // --- 3. Envío al webhook, SIN await ---
+  // keepalive garantiza que la petición se complete aunque el navegador
+  // ya haya salido de la página. Nada bloquea la redirección.
+  if(WEBHOOK_URL){
+    try{
+      fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(datos),
+        keepalive: true
+      }).catch(err => console.error("No se pudo enviar:", err));
+    }catch(err){ console.error("No se pudo enviar:", err); }
+  }else{
+    console.log("Modo demostración — payload que recibiría n8n:", datos);
+  }
+
+  // --- 4. Estado de éxito + enlace de respaldo ---
+  const link = $("wsp-link");
+  if(link) link.href = wspUrl;
   $("form").style.display = "none";
   document.querySelector(".legal").style.display = "none";
   $("exito").style.display = "block";
   $("titulo-gate").textContent = `${nombre}, te abrimos WhatsApp con tu resultado.`;
+
+  // --- 5. Navegación en la MISMA pestaña ---
+  // Sin window.open: los navegadores in-app de Instagram y Facebook
+  // bloquean o pierden las pestañas nuevas con frecuencia.
+  setTimeout(function(){ window.location.href = wspUrl; }, 400);
 });
 
-$("ticket").value = sliderDesdeTicket(800000);
-render();
+// Preselección de nicho desde la URL: ?nicho=dental
+// Permite que cada campaña aterrice con su vertical ya elegida.
+(function(){
+  try{
+    const n = new URLSearchParams(window.location.search).get('nicho');
+    if(n && NICHOS[n]){
+      $("nicho").value = n;
+      const base   = NICHOS[n].ticket;
+      const factor = MONEDAS[moneda].def / MONEDAS.COP.def;
+      $("ticket").value = sliderDesdeTicket(Math.max(MONEDAS[moneda].min, base*factor));
+      render();
+      return;
+    }
+  }catch(err){}
+  $("ticket").value = sliderDesdeTicket(800000);
+  render();
+})();
 </script>
 </body>
 </html>
