@@ -590,7 +590,8 @@ $("form").addEventListener("submit", e => {
   // --- Origen de campaña ---
   let utm = {};
   try { utm = JSON.parse(sessionStorage.getItem('nx_utm') || '{}'); } catch(err) {}
-  const origen = utm.source || 'organico';
+  const origen = utm.source
+              || (sessionStorage.getItem('nx_fbclid') ? 'meta' : 'organico');
 
   const datos = {
     event: "lead",
